@@ -2,6 +2,7 @@ from srsinst.rga.tasks.analogscantask import AnalogScanTask
 from srsgui import InstrumentInput, IntegerInput, ListInput, StringInput
 from lxedrivers.utils import *
 from lxedrivers.analysis import *
+import os
 
 class IsotopeAnalysis(AnalogScanTask):
 
@@ -17,10 +18,10 @@ class IsotopeAnalysis(AnalogScanTask):
     input_parameters = {
         InstrumentName: InstrumentInput(),
         StartMass: IntegerInput(1, " AMU", 0, 319, 1),
-        StopMass: IntegerInput(50, " AMU", 1, 320, 1),
-        ScanSpeed: IntegerInput(3, " ", 0, 9, 1),
+        StopMass: IntegerInput(150, " AMU", 1, 320, 1),
+        ScanSpeed: IntegerInput(1, " ", 0, 9, 1),
         StepSize: IntegerInput(20, " steps per AMU", 10, 80, 1),
-        IntensityUnit: ListInput(['Ion current (fA)', 'Partial Pressure (Torr)']),
+        IntensityUnit: ListInput(['Partial Pressure (Torr)', 'Ion current (fA)']),
         OutputDirectory: StringInput(r'C:\Users\lxere\Software\rga-drivers\data')
     }
     
@@ -33,6 +34,9 @@ class IsotopeAnalysis(AnalogScanTask):
     def test(self):
         self.set_task_passed(True)
         self.add_details('{}'.format(self.id_string), key='ID')
+
+        # make the output directory if it doesn't already exist
+        os.makedirs(self.params['Output directory'], exist_ok=True)
 
         files_written = 0
         while self.is_running():
@@ -48,13 +52,13 @@ class IsotopeAnalysis(AnalogScanTask):
                 isotopes = [124 + i for i in range(13)]
                 pressures = get_partial_pressures(isotopes, mass_axis, spectrum_in_torr)
                 abundances = get_abundances(pressures)
-                [print('Xenon {}: {} percent'.format(isotopes[i], abundances[i])) for i in range(len(isotopes))]
+                [print('Xenon {}: {:.3} percent'.format(isotopes[i], abundances[i])) for i in range(len(isotopes))]
 
                 # save the data to a file
                 with open(this_file, 'w') as f:
-                    f.write('Mass [amu]\tPressure [torr]\n')
+                    f.write('Mass [amu], Pressure [torr]\n')
                     for x, y in zip(mass_axis, spectrum_in_torr):
-                        f.write('{:.2f}\t{:.4e}\n'.format(x, y))
+                        f.write('{:.2f}, {:.4e}\n'.format(x, y))
                 files_written += 1
 
                 print('Scan ' + str(files_written) + ' written to ' + this_file)

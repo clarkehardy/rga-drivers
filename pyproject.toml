@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "lxedrivers"
+name = "rgadrivers"
 version = "0.0.1"
 
 [tool.setuptools.packages.find]

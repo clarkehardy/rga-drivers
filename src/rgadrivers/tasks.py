@@ -1,7 +1,7 @@
 from srsinst.rga.tasks.analogscantask import AnalogScanTask
 from srsgui import InstrumentInput, IntegerInput, ListInput, StringInput
-from lxedrivers.utils import *
-from lxedrivers.analysis import *
+from rgadrivers.utils import *
+from rgadrivers.analysis import *
 import os
 
 class IsotopeAnalysis(AnalogScanTask):

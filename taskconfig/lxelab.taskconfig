@@ -49,5 +49,5 @@ task: Histogram Scan,              srsinst.rga.tasks.histogramscantask,         
 task: Pressure vs. Time Scan,      srsinst.rga.tasks.pvstscantask,                PvsTScanTask
 task: Derived P vs. T Scan,        srsinst.rga.tasks.derivedpvstscantask,         DerivedPvsTScanTask
 task: Composition analysis scan,   srsinst.rga.tasks.compositionanalysistask,     CompositionAnalysisTask
-task: Isotope analysis scan,       lxedrivers.tasks,				  IsotopeAnalysis
+task: Isotope analysis scan,       rgadrivers.tasks,				              IsotopeAnalysis
 

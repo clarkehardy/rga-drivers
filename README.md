@@ -6,22 +6,22 @@ This package contains the custom drivers we use with the SRS RGA software, in ad
 
 ## Making a Task
 The basic steps for making a new task are as follows:
-#### 1. Define the class in `src/lxedrivers/tasks.py`
+#### 1. Define the class in `src/rgadrivers/tasks.py`
 The class for the new task should inherit either from the existing `srsgui.Task` class, or from one of its child classes defined in the `srsinst.rga.tasks` module. For example, the `IsotopeAnalysis` class inherits from `srsinst.rga.tasks.analogscantask.AnalogScanTask` class, because it reuses a lot of the basic functionality.
 #### 2. Write `setup`, `test`, and `cleanup` methods
 To avoid overriding essential methods from the parent classes, we should only be touching these three methods. In the `IsotopeAnalysis` case, the majority of additions to the code occur in the `test` method that runs the main scan acquisition loop. There, I added some code to write the data to a file and compute and print the real-time isotopic abundance measurement. To avoid cluttering this module, which should really only have task classes, each with the three aforementioned methods, I've put additional functions into either the `utils` or `analysis` module. The `utils` module contains basic utilities for saving, loading, etc. while the `analysis` module contains the physics analysis functions.
-#### 3. Build the `lxedrivers` package.
-In order for the `srsinst.rga` software to identify the new tasks, they need to be easily importable from other directories. To achieve this, I've added a simple `pyproject.toml` file that will allow us to install the `lxedrivers` package in the same virtual environment from which the `srsinst.rga` software is called. Building the package is done as follows:
+#### 3. Build the `rgadrivers` package.
+In order for the `srsinst.rga` software to identify the new tasks, they need to be easily importable from other directories. To achieve this, I've added a simple `pyproject.toml` file that will allow us to install the `rgadrivers` package in the same virtual environment from which the `srsinst.rga` software is called. Building the package is done as follows:
 ```cmd
 cd C:\Users\lxere\Software
 srsisnt-rga-env\Scripts\activate
 cd rga-drivers
 pip install .
 ```
-#### 4. Add the new task to the `lxedrivers.taskconfig` file
+#### 4. Add the new task to the `lxelab.taskconfig` file
 For the sake of simplicity, we can keep all our frequent tasks in this single `.taskconfig` file. To add a task, we give the task name, the importable module containing the task, and the task class, in the following format:
 ```
-task: New task name,       lxedrivers.tasks,				  NewTaskClass
+task: New task name,       rgadrivers.tasks,				  NewTaskClass
 ```
 Any time the new class is updated, we have to rebuild the python package and reload the `.taskconfig` file from within the `srsinsts.rga` software. Following this, the new task should be available under the Tasks menu bar item.
 

@@ -38,7 +38,7 @@ def get_abundances(pressures):
     return pressures*100/total_pressure
 
 def disconnect_rga(rga):
-    rga1.filament.turn_off()
+    rga.filament.turn_off()
     rga.disconnect()
 
 shutdown_requested = False

@@ -14,7 +14,7 @@ To avoid overriding essential methods from the parent classes, we should only be
 In order for the `srsinst.rga` software to identify the new tasks, they need to be easily importable from other directories. To achieve this, I've added a simple `pyproject.toml` file that will allow us to install the `lxedrivers` package in the same virtual environment from which the `srsinst.rga` software is called. Building the package is done as follows:
 ```cmd
 cd C:\Users\lxere\Software
-srsint-rga-env\Scripts\activate
+srsisnt-rga-env\Scripts\activate
 cd rga-drivers
 pip install .
 ```

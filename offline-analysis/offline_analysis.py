@@ -223,7 +223,7 @@ class OfflineAnalysis:
 
         plt.show()
     
-    def plot_mass_evolution_peakfound(self, mass, ax=None, window=2.2, fit=False, label_gap=True):
+    def plot_mass_evolution_peakfound(self, mass, ax=None, window=2.2, fit=False, label_gap=True, threshold_ratio=1.5):
         if ax is None:
             fig, ax = plt.subplots(figsize=(12, 6))
 
@@ -247,12 +247,14 @@ class OfflineAnalysis:
         # Plot control run
         if ps_control:
             ax.plot(ts_control_h, ps_control, '.', label=f'{mass} amu (Control Run)')
+            self._detect_large_changes(ts_control_h, ps_control, 'Control Run', threshold_ratio, self.times[:len(ps_control)])
         
         # Plot xenon run with complete gap removal and vertical marker
         if ps_xenon:
             ts_xenon_h, ps_xenon = self._handle_large_gaps(ts_xenon_h, ps_xenon, ax, label_gap)
 
             ax.plot(ts_xenon_h, ps_xenon, '.', label=f'{mass} amu (Xenon Run)')
+            self._detect_large_changes(ts_xenon_h, ps_xenon, 'Xenon Run', threshold_ratio, self.times[len(ps_control):])
         
         ax.set_xlabel('Hours since start')
         ax.set_ylabel('Partial pressure [torr]')
@@ -289,6 +291,22 @@ class OfflineAnalysis:
             last_time = ts[i]
 
         return new_ts, new_ps
+    
+    def _detect_large_changes(self, ts_h, ps, run_type, threshold_ratio, times):
+        """
+        Helper function to detect significant pressure changes between consecutive points and print the time.
+        :param ts_h: List of times (in hours).
+        :param ps: List of pressures.
+        :param run_type: The label for the current run (e.g., "Control Run" or "Xenon Run").
+        :param threshold_ratio: The threshold ratio for detecting large changes.
+        :param times: The list of actual datetime objects corresponding to the data points.
+        """
+        for i in range(1, len(ps)):
+            ratio = ps[i] / ps[i - 1]
+            if ratio > threshold_ratio or ratio < (1 / threshold_ratio):
+                print(f"Significant change during {run_type} at {times[i].strftime('%Y-%m-%d %H:%M:%S')}, pressure ratio: {ratio:.2f}")
+
+
     
     def get_peakfound_pressure(self, mass, scan_index, window=2):
         pressures = self.interpolated_data[scan_index]

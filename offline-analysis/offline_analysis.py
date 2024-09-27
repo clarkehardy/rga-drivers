@@ -223,7 +223,22 @@ class OfflineAnalysis:
 
         plt.show()
     
-    def plot_mass_evolution_peakfound(self, mass, ax=None, window=2.2, fit=False, label_gap=True, threshold_ratio=1.5):
+    def plot_mass_evolution_peakfound(self, mass, ax=None, window=2.2, fit=False, label_gap=True, threshold_ratio=1.5, scale_by_first=True):
+        """
+        Plot the mass evolution of a specified mass value over time with peak detection and significant pressure change detection.
+    
+        Parameters:
+        - mass: The target mass value to plot the pressure evolution for.
+        - ax: Optional matplotlib axis to plot on. If not provided, a new figure is created.
+        - window: Mass window around the target mass to search for peaks.
+        - fit: If True, perform a curve fit on the time-pressure data.
+        - label_gap: If True, label the large time gaps in the xenon run.
+        - threshold_ratio: The threshold ratio for detecting large pressure changes between consecutive points.
+        - scale_by_first: If True, scale the pressures by the first datapoint to normalize the data.
+    
+        This function also detects significant changes in pressure between consecutive points.
+        """
+
         if ax is None:
             fig, ax = plt.subplots(figsize=(12, 6))
 
@@ -231,6 +246,9 @@ class OfflineAnalysis:
         ps_xenon, ts_xenon_h = [], []
         start_control = self.run_intervals["control_run"][0]
         start_xenon = self.run_intervals["xenon_run"][0]
+
+        first_point_control = None  # Track the first point in the control run
+        first_point_xenon = None  # Track the first point in the xenon run
 
         for i, timestamp in enumerate(self.times):
             p, m_ret = self.get_peakfound_pressure(mass, i, window=window)
@@ -240,9 +258,20 @@ class OfflineAnalysis:
             if self.labels[i] == "control_run":
                 ts_control_h.append((timestamp - start_control).total_seconds() / 3600)  # Control run hours since start
                 ps_control.append(p)
+                if first_point_control is None:
+                    first_point_control = p  # Set the first point for control run
             elif self.labels[i] == "xenon_run":
                 ts_xenon_h.append((timestamp - start_xenon).total_seconds() / 3600)  # Xenon run hours since start
                 ps_xenon.append(p)
+                if first_point_xenon is None:
+                    first_point_xenon = p  # Set the first point for xenon run
+
+        # Scale the pressures by the first datapoint if requested
+        if scale_by_first:
+            if first_point_control:
+                ps_control = [p / first_point_control for p in ps_control]
+            if first_point_xenon:
+                ps_xenon = [p / first_point_xenon for p in ps_xenon]
         
         # Plot control run
         if ps_control:
@@ -257,7 +286,11 @@ class OfflineAnalysis:
             self._detect_large_changes(ts_xenon_h, ps_xenon, 'Xenon Run', threshold_ratio, self.times[len(ps_control):])
         
         ax.set_xlabel('Hours since start')
-        ax.set_ylabel('Partial pressure [torr]')
+
+        if scale_by_first:
+            ax.set_ylabel(f'Pressure relative to first datapoint [Normalized]')
+        else:
+            ax.set_ylabel('Partial pressure [torr]')
         ax.set_yscale('log')
         ax.legend()
         plt.show()
@@ -281,9 +314,9 @@ class OfflineAnalysis:
                 
                 if label_gap:
                     # Add a vertical marker for the gap
-                    ax.axvline(last_time, color='#FA8072', linestyle='--', linewidth=2)  # Vertical line in red
+                    ax.axvline(last_time, color='orange', linestyle='--', linewidth=2)  # Vertical line in red
                     # Add the label above the vertical line
-                    ax.text(last_time + 1, max(ps) * 1.1, '5 days of scrubbing', color='#FA8072', verticalalignment='center', horizontalalignment='left')
+                    ax.text(last_time + 1, max(ps) * 1.1, '5 days of scrubbing', color='orange', verticalalignment='center', horizontalalignment='left')
 
             # Shift the current timestamp by the full gap duration
             new_ts.append(ts[i] - time_shift)

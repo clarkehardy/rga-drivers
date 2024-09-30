@@ -28,7 +28,10 @@ class OfflineAnalysis:
     def load_data(self, target_mass_grid=None):
         # Automatically find all .dat files in the directory
         data_files = [f for f in os.listdir(self.directory) if f.endswith('.dat')]
-        
+        if(len(data_files) == 0):
+            print("No .dat files found in the directory.")
+            return
+
         # If no target mass grid is provided, generate a common one from 1 to 150 with 0.05 step size
         if target_mass_grid is None:
             target_mass_grid = np.arange(1, 150 + 0.05, 0.05)  # Create mass grid with 0.05 amu steps
@@ -78,6 +81,13 @@ class OfflineAnalysis:
     def get_times(self):
         return self.times
     
+    def get_index_of_time(self, timestamp):
+        #find the closest timestamp in the list of times
+        return np.abs(np.array(self.times) - timestamp).argmin()
+    
+    def get_time_of_index(self, index):
+        return self.times[index]
+    
     def get_masses(self):
         return self.masses
     
@@ -107,14 +117,14 @@ class OfflineAnalysis:
         # Set axis labels, limits, legend, and title
         ax.set_xlabel('Mass [amu]')
         ax.set_ylabel('Partial pressure [torr]')
-        ax.set_xlim([1, 140])  # Adjust the x-axis range as needed
-        ax.set_ylim([1e-11, 1e-6])  # Adjust the y-axis range as needed
+        #ax.set_xlim([1, 140])  # Adjust the x-axis range as needed
+        #ax.set_ylim([1e-11, 1e-6])  # Adjust the y-axis range as needed
         ax.legend()  # Display legend
         ax.grid()  # Show grid lines
         ax.set_title(f'Uncalibrated Spectrum - {timestamp}')  # Set the plot title with timestamp
 
         # Save the figure as a PNG file
-        fig.savefig(f'figures/uncalibrated_spectrum_{timestamp}.png')
+        #fig.savefig(f'figures/uncalibrated_spectrum_{timestamp}.png')
 
         # Display the plot
         plt.show()
@@ -152,7 +162,7 @@ class OfflineAnalysis:
 
         # Apply the zoomed x-axis range (input by user)
         ax.set_xlim([x_min, x_max])
-        ax.set_ylim([1e-11, 1e-6])
+        #ax.set_ylim([1e-11, 1e-6])
         
         # Automatically adjust the y-axis based on the data within the x range
         mask = (masses >= x_min) & (masses <= x_max)
@@ -163,7 +173,7 @@ class OfflineAnalysis:
         ax.set_title(f'Zoomed Spectrum - {timestamp}')
 
         # Save the figure as a PNG file
-        fig.savefig(f'figures/zoomed_spectrum_{timestamp}.png')
+        #fig.savefig(f'figures/zoomed_spectrum_{timestamp}.png')
 
         # Display the plot
         plt.show()  
@@ -191,6 +201,92 @@ class OfflineAnalysis:
             ts.append(self.times[i])
 
         return ps, ts
+    
+    def get_total_pressure(self, trange=None):
+        """
+        Extracts the total pressure over time.
+        """
+        ps = []
+        ts = []
+
+        if(trange is None):
+            trange = [self.times[0], self.times[-1]]
+        else:
+            trange = [max(trange[0], self.times[0]), min(trange[1], self.times[-1])]
+        
+        selected_times = [t for t in self.times if t >= trange[0] and t <= trange[1]]
+        for i, timestamp in enumerate(selected_times):
+            idx = self.get_index_of_time(timestamp)
+            #for whatever reason, the last value of interpolated data is a nan. 
+            #check this later as we restructure the code. 
+            p = np.sum(self.interpolated_data[idx][:-1])
+            ps.append(p)
+            ts.append(timestamp)
+
+        return ps, ts
+    
+    #just integrates range of interest for xenon isotopes
+    def get_xenon_pressure(self, trange=None):
+        """
+        Extracts the total pressure over time.
+        """
+        ps = []
+        ts = []
+
+        if(trange is None):
+            trange = [self.times[0], self.times[-1]]
+        else:
+            trange = [max(trange[0], self.times[0]), min(trange[1], self.times[-1])]
+        
+        selected_times = [t for t in self.times if t >= trange[0] and t <= trange[1]]
+        masses_double = [59, 68]
+        masses_single = [119, 136]
+        for i, timestamp in enumerate(selected_times):
+            idx = self.get_index_of_time(timestamp)
+            #for whatever reason, the last value of interpolated data is a nan. 
+            #check this later as we restructure the code. 
+
+            #double ionized range
+            #get index of the mass closest to the desired mass
+            m_idxs = [(np.abs(self.masses - masses_double[0])).argmin(), (np.abs(self.masses - masses_double[1])).argmin()]
+            p = np.sum(self.interpolated_data[idx][m_idxs[0]:m_idxs[1]+1])
+
+            #single ionized range
+            m_idxs = [(np.abs(self.masses - masses_single[0])).argmin(), (np.abs(self.masses - masses_single[1])).argmin()]
+            p += np.sum(self.interpolated_data[idx][m_idxs[0]:m_idxs[1]+1])
+
+            ps.append(p)
+            ts.append(timestamp)
+
+        return ps, ts
+
+    #if trange is given, which would be in the format of a list of two datetime
+    #objects, then it only does this algorithm on scans within the range. 
+    def get_mass_evolution_peakfound(self, mass, window=0.75, trange=None):
+        """
+        Extracts the pressure evolution for a given mass over time.
+        """
+        ps = []
+        ts = []
+        ms = [] #for reporting the masses reconstructed
+
+        if(trange is None):
+            trange = [self.times[0], self.times[-1]]
+        else:
+            trange = [max(trange[0], self.times[0]), min(trange[1], self.times[-1])]
+        
+        selected_times = [t for t in self.times if t >= trange[0] and t <= trange[1]]
+        for i, timestamp in enumerate(selected_times):
+            idx = self.get_index_of_time(timestamp)
+            p, m_ret = self.get_peakfound_pressure(mass, idx, window=window)
+            if p is None:
+                continue
+
+            ps.append(p)
+            ms.append(m_ret)
+            ts.append(timestamp)
+
+        return ps, ts, ms
 
     def plot_mass_evolution(self, mass, ax=None, smoothing=False):
         """
@@ -340,7 +436,8 @@ class OfflineAnalysis:
                 print(f"Significant change during {run_type} at {times[i].strftime('%Y-%m-%d %H:%M:%S')}, pressure ratio: {ratio:.2f}")
 
 
-    
+    #window is a full  width of the window centered at the mass of interest,
+    #not a half-mass window. So if window = 1, it will go from mass - 0.5 to mass + 0.5
     def get_peakfound_pressure(self, mass, scan_index, window=2):
         pressures = self.interpolated_data[scan_index]
         masses = self.masses
